@@ -1,0 +1,50 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  customerservice:
+    build:
+      context: .
+      dockerfile: CustomerService/CustomerService.Api/Dockerfile
+    ports:
+      - "5001:8080"
+    container_name: customerservice
+    restart: unless-stopped
+
+  productservice:
+    build:
+      context: .
+      dockerfile: ProductService/ProductService.Api/Dockerfile
+    ports:
+      - "5003:8080"
+    container_name: productservice
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  orderservice:
+    build:
+      context: .
+      dockerfile: OrderService/OrderService.Api/Dockerfile
+    ports:
+      - "5002:8080"
+    container_name: orderservice
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      customerservice:
+        condition: service_started
+      productservice:
+        condition: service_started
