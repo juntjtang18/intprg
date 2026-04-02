@@ -1,0 +1,170 @@
+@page "/orders"
+@inject GatewayApiClient ApiClient
+
+<PageTitle>Orders</PageTitle>
+
+<h1 class="mb-4">Orders</h1>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header">Create Order</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                {
+                    <div class="alert @(IsError ? "alert-danger" : "alert-success")">@StatusMessage</div>
+                }
+
+                <EditForm Model="OrderForm" OnValidSubmit="CreateOrderAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Customer</label>
+                        <InputSelect class="form-select" @bind-Value="OrderForm.CustomerId">
+                            <option value="0">Select customer</option>
+                            @foreach (var customer in CustomerItems)
+                            {
+                                <option value="@customer.Id">@customer.Name (@customer.Email)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <InputSelect class="form-select" @bind-Value="OrderForm.ProductId">
+                            <option value="0">Select product</option>
+                            @foreach (var product in ProductItems)
+                            {
+                                <option value="@product.Id">@product.Name - @product.Price.ToString("C")</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <InputNumber class="form-control" @bind-Value="OrderForm.Quantity" />
+                    </div>
+
+                    <button class="btn btn-primary" type="submit" disabled="@(IsSubmitting || CustomerItems.Count == 0 || ProductItems.Count == 0)">@(IsSubmitting ? "Saving..." : "Create Order")</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>All Orders</span>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadOrdersAsync">Refresh</button>
+            </div>
+            <div class="card-body p-0">
+                @if (IsLoading)
+                {
+                    <div class="p-3">Loading orders...</div>
+                }
+                else if (!string.IsNullOrWhiteSpace(LoadError))
+                {
+                    <div class="alert alert-danger m-3">@LoadError</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Total</th>
+                                    <th>Payment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in OrderItems)
+                                {
+                                    <tr>
+                                        <td>@order.Order?.Id</td>
+                                        <td>@(order.Customer?.Name ?? $"Customer #{order.Order?.CustomerId}")</td>
+                                        <td>@(order.Product?.Name ?? $"Product #{order.Order?.ProductId}")</td>
+                                        <td>@order.Order?.Quantity</td>
+                                        <td>@(order.Order?.Total.ToString("C"))</td>
+                                        <td>@(order.Payment?.Status ?? "Pending")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<CustomerDto> CustomerItems { get; set; } = new();
+    private List<ProductDto> ProductItems { get; set; } = new();
+    private List<OrderAggregateDto> OrderItems { get; set; } = new();
+    private CreateOrderDto OrderForm { get; set; } = new() { Quantity = 1 };
+    private bool IsLoading { get; set; } = true;
+    private bool IsSubmitting { get; set; }
+    private string? LoadError { get; set; }
+    private string? StatusMessage { get; set; }
+    private bool IsError { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPageDataAsync();
+    }
+
+    private async Task LoadPageDataAsync()
+    {
+        IsLoading = true;
+        LoadError = null;
+
+        try
+        {
+            CustomerItems = await ApiClient.GetCustomersAsync();
+            ProductItems = await ApiClient.GetProductsAsync();
+            OrderItems = await ApiClient.GetOrdersAsync();
+        }
+        catch (Exception ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        await LoadPageDataAsync();
+    }
+
+    private async Task CreateOrderAsync()
+    {
+        IsSubmitting = true;
+        StatusMessage = null;
+
+        try
+        {
+            await ApiClient.CreateOrderAsync(OrderForm);
+            OrderForm = new CreateOrderDto { Quantity = 1 };
+            IsError = false;
+            StatusMessage = "Order created successfully.";
+            await LoadPageDataAsync();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            StatusMessage = ex.Message;
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}

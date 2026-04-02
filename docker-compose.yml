@@ -80,3 +80,16 @@ services:
         condition: service_started
       paymentservice:
         condition: service_started
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Frontend/Frontend.Ui/Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "5001:8080"
+    depends_on:
+      apigateway:
+        condition: service_started

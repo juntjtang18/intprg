@@ -1,0 +1,154 @@
+@page "/payments"
+@inject GatewayApiClient ApiClient
+
+<PageTitle>Payments</PageTitle>
+
+<h1 class="mb-4">Payments</h1>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header">Add Payment</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                {
+                    <div class="alert @(IsError ? "alert-danger" : "alert-success")">@StatusMessage</div>
+                }
+
+                <EditForm Model="PaymentForm" OnValidSubmit="CreatePaymentAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Order ID</label>
+                        <InputNumber class="form-control" @bind-Value="PaymentForm.OrderId" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Customer ID</label>
+                        <InputNumber class="form-control" @bind-Value="PaymentForm.CustomerId" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <InputNumber class="form-control" @bind-Value="PaymentForm.Amount" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <InputText class="form-control" @bind-Value="PaymentForm.Status" />
+                    </div>
+
+                    <button class="btn btn-primary" type="submit" disabled="@IsSubmitting">@(IsSubmitting ? "Saving..." : "Add Payment")</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>All Payments</span>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadPaymentsAsync">Refresh</button>
+            </div>
+            <div class="card-body p-0">
+                @if (IsLoading)
+                {
+                    <div class="p-3">Loading payments...</div>
+                }
+                else if (!string.IsNullOrWhiteSpace(LoadError))
+                {
+                    <div class="alert alert-danger m-3">@LoadError</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Order ID</th>
+                                    <th>Customer ID</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in PaymentItems)
+                                {
+                                    <tr>
+                                        <td>@payment.Id</td>
+                                        <td>@payment.OrderId</td>
+                                        <td>@payment.CustomerId</td>
+                                        <td>@payment.Amount.ToString("C")</td>
+                                        <td>@payment.Status</td>
+                                        <td>@payment.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<PaymentDto> PaymentItems { get; set; } = new();
+    private CreatePaymentDto PaymentForm { get; set; } = new() { Status = "Completed" };
+    private bool IsLoading { get; set; } = true;
+    private bool IsSubmitting { get; set; }
+    private string? LoadError { get; set; }
+    private string? StatusMessage { get; set; }
+    private bool IsError { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPaymentsAsync();
+    }
+
+    private async Task LoadPaymentsAsync()
+    {
+        IsLoading = true;
+        LoadError = null;
+
+        try
+        {
+            PaymentItems = await ApiClient.GetPaymentsAsync();
+        }
+        catch (Exception ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task CreatePaymentAsync()
+    {
+        IsSubmitting = true;
+        StatusMessage = null;
+
+        try
+        {
+            await ApiClient.CreatePaymentAsync(PaymentForm);
+            PaymentForm = new CreatePaymentDto { Status = "Completed" };
+            IsError = false;
+            StatusMessage = "Payment added successfully.";
+            await LoadPaymentsAsync();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            StatusMessage = ex.Message;
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}
