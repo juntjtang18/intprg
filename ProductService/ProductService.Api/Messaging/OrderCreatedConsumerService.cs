@@ -2,21 +2,12 @@ using System.Text;
 using System.Text.Json;
 using Contracts;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using ProductService.Api.Data;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace ProductService.Api.Messaging;
 
-/// <summary>
-/// Consumes OrderCreated events and updates Product stock.
-///
-/// Resiliency note:
-/// RabbitMQ can take a few seconds to be ready after container start.
-/// This consumer uses a retry loop so ProductService does NOT crash on startup races.
-/// </summary>
 public class OrderCreatedConsumerService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -46,7 +37,8 @@ public class OrderCreatedConsumerService : BackgroundService
 
     private async Task ConsumeLoop(CancellationToken stoppingToken)
     {
-        const string queueName = "order-created";
+        const string exchangeName = "order-created-exchange";
+        const string queueName = "order-created-product";
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -58,7 +50,24 @@ public class OrderCreatedConsumerService : BackgroundService
                 _connection = _factory.CreateConnection();
                 _channel = _connection.CreateModel();
 
-                _channel.QueueDeclare(queue: queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+                _channel.ExchangeDeclare(
+                    exchange: exchangeName,
+                    type: ExchangeType.Fanout,
+                    durable: true,
+                    autoDelete: false);
+
+                _channel.QueueDeclare(
+                    queue: queueName,
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+
+                _channel.QueueBind(
+                    queue: queueName,
+                    exchange: exchangeName,
+                    routingKey: "");
+
                 _channel.BasicQos(0, 1, false);
 
                 var consumer = new AsyncEventingBasicConsumer(_channel);
@@ -75,7 +84,10 @@ public class OrderCreatedConsumerService : BackgroundService
                             using var scope = _scopeFactory.CreateScope();
                             var db = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
 
-                            var product = await db.Products.FirstOrDefaultAsync(p => p.Id == msg.ProductId, stoppingToken);
+                            var product = await db.Products.FirstOrDefaultAsync(
+                                p => p.Id == msg.ProductId,
+                                stoppingToken);
+
                             if (product != null)
                             {
                                 product.Stock -= msg.Quantity;
@@ -84,24 +96,21 @@ public class OrderCreatedConsumerService : BackgroundService
                             }
                         }
 
-                        _channel!.BasicAck(ea.DeliveryTag, multiple: false);
+                        _channel!.BasicAck(ea.DeliveryTag, false);
                     }
                     catch
                     {
-                        // don’t lose message if something failed
-                        _channel!.BasicNack(ea.DeliveryTag, multiple: false, requeue: true);
+                        _channel!.BasicNack(ea.DeliveryTag, false, true);
                     }
                 };
 
                 _channel.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
 
-                // Keep running while the connection is healthy.
                 while (!stoppingToken.IsCancellationRequested && _connection.IsOpen)
                     await Task.Delay(1000, stoppingToken);
             }
             catch
             {
-                // RabbitMQ not reachable (yet) or connection dropped; wait then retry.
                 await Task.Delay(1000, stoppingToken);
             }
         }
@@ -109,8 +118,8 @@ public class OrderCreatedConsumerService : BackgroundService
 
     public override void Dispose()
     {
-        try { _channel?.Close(); } catch { /* ignore */ }
-        try { _connection?.Close(); } catch { /* ignore */ }
+        try { _channel?.Close(); } catch { }
+        try { _connection?.Close(); } catch { }
         _channel?.Dispose();
         _connection?.Dispose();
         base.Dispose();

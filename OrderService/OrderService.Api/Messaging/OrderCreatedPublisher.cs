@@ -5,15 +5,9 @@ using Contracts;
 
 namespace OrderService.Api.Messaging;
 
-/// <summary>
-/// Publishes OrderCreated events to RabbitMQ.
-///
-/// - Lazy-connect so API can start even if RabbitMQ is still booting.
-/// - Retries during publish to handle transient "connection refused".
-/// </summary>
 public sealed class OrderCreatedPublisher : IDisposable
 {
-    private const string QueueName = "order-created";
+    private const string ExchangeName = "order-created-exchange";
 
     private readonly object _lock = new();
     private readonly ConnectionFactory _factory;
@@ -53,7 +47,13 @@ public sealed class OrderCreatedPublisher : IDisposable
                 {
                     _connection = _factory.CreateConnection();
                     _channel = _connection.CreateModel();
-                    _channel.QueueDeclare(queue: QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+
+                    _channel.ExchangeDeclare(
+                        exchange: ExchangeName,
+                        type: ExchangeType.Fanout,
+                        durable: true,
+                        autoDelete: false);
+
                     return;
                 }
                 catch (Exception ex)
@@ -78,13 +78,17 @@ public sealed class OrderCreatedPublisher : IDisposable
         var properties = _channel!.CreateBasicProperties();
         properties.Persistent = true;
 
-        _channel.BasicPublish(exchange: "", routingKey: QueueName, basicProperties: properties, body: body);
+        _channel.BasicPublish(
+            exchange: ExchangeName,
+            routingKey: "",
+            basicProperties: properties,
+            body: body);
     }
 
     public void Dispose()
     {
-        try { _channel?.Close(); } catch { /* ignore */ }
-        try { _connection?.Close(); } catch { /* ignore */ }
+        try { _channel?.Close(); } catch { }
+        try { _connection?.Close(); } catch { }
         _channel?.Dispose();
         _connection?.Dispose();
     }

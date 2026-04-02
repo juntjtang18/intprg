@@ -48,3 +48,17 @@ services:
         condition: service_started
       productservice:
         condition: service_started
+
+  paymentservice:
+    build:
+      context: .
+      dockerfile: PaymentService/PaymentService.Api/Dockerfile
+    ports:
+      - "5004:8080"
+    container_name: paymentservice
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      orderservice:
+        condition: service_started
