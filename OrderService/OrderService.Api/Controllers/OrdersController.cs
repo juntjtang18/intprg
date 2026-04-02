@@ -1,10 +1,10 @@
+using Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Data;
-using OrderService.Api.Models;
-using Contracts;
-using OrderService.Api.Messaging;
 using OrderService.Api.Dtos;
+using OrderService.Api.Messaging;
+using OrderService.Api.Models;
 using OrderService.Api.Services;
 
 namespace OrderService.Api.Controllers;
@@ -33,22 +33,31 @@ public class OrdersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return Ok(await _context.Orders.ToListAsync());
+        var orders = await _context.Orders
+            .Select(o => ToResponse(o))
+            .ToListAsync();
+
+        return Ok(orders);
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound();
+        return Ok(ToResponse(order));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateOrderRequest request, CancellationToken ct)
     {
-        // Basic input validation (rubric: execution / validation)
         if (request.Quantity <= 0)
             return BadRequest("Quantity must be greater than 0.");
 
-        // Synchronous validation against owning services (keeps data ownership intact)
         var customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId);
         if (!customerExists)
             return BadRequest("Customer does not exist.");
 
-        // Validate product by querying ProductService, and compute Total server-side.
         decimal? unitPrice;
         try
         {
@@ -67,17 +76,13 @@ public class OrdersController : ControllerBase
             CustomerId = request.CustomerId,
             ProductId = request.ProductId,
             Quantity = request.Quantity,
-            // Total is computed server-side (do not accept client input).
-            Total = unitPrice.Value * request.Quantity
+            Total = unitPrice.Value * request.Quantity,
+            Id = 0
         };
-
-        // Ignore any client-provided Id (CreateOrderRequest doesn't include it, but keep the intent explicit)
-        order.Id = 0;
 
         await _context.Orders.AddAsync(order, ct);
         await _context.SaveChangesAsync(ct);
 
-        // Publish OrderCreated event to RabbitMQ (queue: order-created)
         try
         {
             _publisher.Publish(new OrderCreated
@@ -90,10 +95,18 @@ public class OrdersController : ControllerBase
         }
         catch
         {
-            // If RabbitMQ is down, surface a clear status rather than an opaque 500.
             return StatusCode(503, "Order saved, but event publish failed because RabbitMQ is unavailable.");
         }
 
-        return Ok(order);
+        return CreatedAtAction(nameof(GetById), new { id = order.Id }, ToResponse(order));
     }
+
+    private static OrderResponse ToResponse(Order order) => new()
+    {
+        Id = order.Id,
+        Total = order.Total,
+        CustomerId = order.CustomerId,
+        ProductId = order.ProductId,
+        Quantity = order.Quantity
+    };
 }

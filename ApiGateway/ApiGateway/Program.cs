@@ -49,7 +49,6 @@ app.MapGet("/", () => Results.Ok(new
     }
 }));
 
-// 先把 /aggregates 这组请求交给 Controller，自身处理
 app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/aggregates"), branch =>
 {
     branch.UseRouting();
@@ -59,7 +58,6 @@ app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/aggregates"), branch =>
     });
 });
 
-// 其他 /gateway/... 请求再交给 Ocelot
 await app.UseOcelot();
 
 app.Run();

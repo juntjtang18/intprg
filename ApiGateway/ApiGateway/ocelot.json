@@ -16,7 +16,7 @@
         { "Host": "orderservice", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/gateway/orders/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET" ]
     },
     {
       "DownstreamPathTemplate": "/api/products",
@@ -34,7 +34,7 @@
         { "Host": "productservice", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/gateway/products/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET" ]
     },
     {
       "DownstreamPathTemplate": "/api/customers",
@@ -43,7 +43,7 @@
         { "Host": "customerservice", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/gateway/customers",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamHttpMethod": [ "GET", "POST" ]
     },
     {
       "DownstreamPathTemplate": "/api/customers/{everything}",
@@ -52,7 +52,7 @@
         { "Host": "customerservice", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/gateway/customers/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET" ]
     },
     {
       "DownstreamPathTemplate": "/api/payments",
@@ -70,7 +70,7 @@
         { "Host": "paymentservice", "Port": 8080 }
       ],
       "UpstreamPathTemplate": "/gateway/payments/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET" ]
     }
   ],
   "GlobalConfiguration": {

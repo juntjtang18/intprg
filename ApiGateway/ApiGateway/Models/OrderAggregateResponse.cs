@@ -2,13 +2,13 @@ namespace ApiGateway.Models;
 
 public class OrderAggregateResponse
 {
-    public OrderDto? Order { get; set; }
-    public CustomerDto? Customer { get; set; }
-    public ProductDto? Product { get; set; }
-    public PaymentDto? Payment { get; set; }
+    public OrderSummaryDto? Order { get; set; }
+    public CustomerSummaryDto? Customer { get; set; }
+    public ProductSummaryDto? Product { get; set; }
+    public PaymentSummaryDto? Payment { get; set; }
 }
 
-public class OrderDto
+public class OrderSummaryDto
 {
     public int Id { get; set; }
     public decimal Total { get; set; }
@@ -17,14 +17,14 @@ public class OrderDto
     public int Quantity { get; set; }
 }
 
-public class CustomerDto
+public class CustomerSummaryDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
 }
 
-public class ProductDto
+public class ProductSummaryDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -32,7 +32,7 @@ public class ProductDto
     public int Stock { get; set; }
 }
 
-public class PaymentDto
+public class PaymentSummaryDto
 {
     public int Id { get; set; }
     public int OrderId { get; set; }

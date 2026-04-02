@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PaymentService.Api.Data;
+using PaymentService.Api.Dtos;
 using PaymentService.Api.Models;
 
 namespace PaymentService.Api.Controllers;
@@ -19,7 +20,12 @@ public class PaymentsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return Ok(await _context.Payments.OrderByDescending(p => p.CreatedAt).ToListAsync());
+        var payments = await _context.Payments
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => ToResponse(p))
+            .ToListAsync();
+
+        return Ok(payments);
     }
 
     [HttpGet("{id:int}")]
@@ -27,7 +33,7 @@ public class PaymentsController : ControllerBase
     {
         var payment = await _context.Payments.FindAsync(id);
         if (payment == null) return NotFound();
-        return Ok(payment);
+        return Ok(ToResponse(payment));
     }
 
     [HttpGet("order/{orderId:int}")]
@@ -35,19 +41,34 @@ public class PaymentsController : ControllerBase
     {
         var payment = await _context.Payments.FirstOrDefaultAsync(p => p.OrderId == orderId);
         if (payment == null) return NotFound();
-        return Ok(payment);
+        return Ok(ToResponse(payment));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Payment payment)
+    public async Task<IActionResult> Create(CreatePaymentRequest request)
     {
-        payment.Id = 0;
-        payment.CreatedAt = payment.CreatedAt == default ? DateTime.UtcNow : payment.CreatedAt;
-        if (string.IsNullOrWhiteSpace(payment.Status))
-            payment.Status = "Completed";
+        var payment = new Payment
+        {
+            Id = 0,
+            OrderId = request.OrderId,
+            CustomerId = request.CustomerId,
+            Amount = request.Amount,
+            Status = string.IsNullOrWhiteSpace(request.Status) ? "Completed" : request.Status,
+            CreatedAt = DateTime.UtcNow
+        };
 
         await _context.Payments.AddAsync(payment);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new { id = payment.Id }, payment);
+        return CreatedAtAction(nameof(GetById), new { id = payment.Id }, ToResponse(payment));
     }
+
+    private static PaymentResponse ToResponse(Payment payment) => new()
+    {
+        Id = payment.Id,
+        OrderId = payment.OrderId,
+        CustomerId = payment.CustomerId,
+        Amount = payment.Amount,
+        Status = payment.Status,
+        CreatedAt = payment.CreatedAt
+    };
 }

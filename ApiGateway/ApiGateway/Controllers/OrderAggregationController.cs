@@ -48,22 +48,21 @@ public class OrderAggregationController : ControllerBase
         return Ok(await BuildOrderAggregateAsync(order, ct));
     }
 
-    private async Task<List<OrderDto>> GetOrdersAsync(CancellationToken ct)
+    private async Task<List<OrderSummaryDto>> GetOrdersAsync(CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient("orders");
         using var response = await client.GetAsync("api/orders", ct);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        return await JsonSerializer.DeserializeAsync<List<OrderDto>>(stream, JsonOptions, ct)
-               ?? new List<OrderDto>();
+        return await JsonSerializer.DeserializeAsync<List<OrderSummaryDto>>(stream, JsonOptions, ct) ?? new List<OrderSummaryDto>();
     }
 
-    private async Task<OrderAggregateResponse> BuildOrderAggregateAsync(OrderDto order, CancellationToken ct)
+    private async Task<OrderAggregateResponse> BuildOrderAggregateAsync(OrderSummaryDto order, CancellationToken ct)
     {
-        var customerTask = GetAsync<CustomerDto>("customers", $"api/customers/{order.CustomerId}", ct);
-        var productTask = GetAsync<ProductDto>("products", $"api/products/{order.ProductId}", ct);
-        var paymentTask = GetAsync<PaymentDto>("payments", $"api/payments/order/{order.Id}", ct);
+        var customerTask = GetAsync<CustomerSummaryDto>("customers", $"api/customers/{order.CustomerId}", ct);
+        var productTask = GetAsync<ProductSummaryDto>("products", $"api/products/{order.ProductId}", ct);
+        var paymentTask = GetAsync<PaymentSummaryDto>("payments", $"api/payments/order/{order.Id}", ct);
 
         await Task.WhenAll(customerTask, productTask, paymentTask);
 
