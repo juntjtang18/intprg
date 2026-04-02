@@ -9,7 +9,7 @@ builder.Services.AddDbContext<PaymentDbContext>(options =>
 
 builder.Services.AddHttpClient("ProductService", client =>
 {
-    client.BaseAddress = new Uri("http://productservice:8080");
+    client.BaseAddress = new Uri("http://productservice:8080/");
 });
 
 builder.Services.AddControllers();

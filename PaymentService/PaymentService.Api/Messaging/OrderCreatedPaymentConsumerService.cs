@@ -134,7 +134,7 @@ public class OrderCreatedPaymentConsumerService : BackgroundService
     private async Task<decimal> GetProductPriceAsync(int productId, CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient("ProductService");
-        using var response = await client.GetAsync($"/api/products/{productId}", ct);
+        using var response = await client.GetAsync($"api/products/{productId}", ct);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);

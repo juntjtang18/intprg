@@ -1,0 +1,88 @@
+# =========================
+# Build results
+# =========================
+bin/
+obj/
+out/
+build/
+
+# =========================
+# Rider / Visual Studio / VSCode
+# =========================
+.vs/
+.vscode/
+.idea/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# NuGet
+# =========================
+*.nupkg
+packages/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# =========================
+# EF Core / local DB
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Publish output
+# =========================
+publish/
+wwwroot/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+
+# =========================
+# Secrets
+# =========================
+secrets.json
+
+# =========================
+# Docker
+# =========================
+docker-compose.override.yml
+
+# =========================
+# Test results
+# =========================
+TestResults/
+
+# =========================
+# Coverage
+# =========================
+coverage/
+*.coverage
+*.coveragexml
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp

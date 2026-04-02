@@ -1,0 +1,16 @@
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/gateway/customers" -ContentType "application/json" -Body '{"name":"James","email":"james@example.com"}'
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/gateway/products" -ContentType "application/json" -Body '{"name":"Laptop","price":1200,"stock":10}'
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:5000/gateway/orders" -ContentType "application/json" -Body '{"customerId":1,"productId":1,"quantity":2}'
+
+Invoke-RestMethod -Method Get -Uri "http://localhost:5000/gateway/orders"
+
+Invoke-RestMethod -Method Get -Uri "http://localhost:5000/gateway/payments"
+
+Invoke-RestMethod -Method Get -Uri "http://localhost:5000/gateway/products"
+
+Invoke-RestMethod -Method Get -Uri "http://localhost:5000/aggregates/orders"
+
+
+Invoke-RestMethod -Method Get -Uri "http://localhost:5000/aggregates/orders"
